@@ -6,10 +6,9 @@
 namespace ttp
 {
 
-// The faceplate is the photo (1168 x 880); a teal rack strip below it holds the
-// setup controls. Total logical canvas is 1168 x 1108.
-static constexpr int kPhotoW = 1168, kPhotoH = 880;
-static constexpr int kW = 1168, kH = 1108;
+// The faceplate is the photo (1168 x 880) and nothing else — every control is
+// mounted on the box itself.
+static constexpr int kW = 1168, kH = 880;
 
 //==============================================================================
 LabeledKnob::LabeledKnob (juce::AudioProcessorValueTreeState& apvts, const char* paramID,
@@ -270,10 +269,10 @@ TurboTubesEditor::TurboTubesEditor (TurboTubesProcessor& p)
     layoutContent();
 
     setResizable (true, true);
-    setResizeLimits (700, 664, 1752, 1662);
+    setResizeLimits (700, 527, 1752, 1320);
     if (auto* c = getConstrainer())
         c->setFixedAspectRatio ((double) kW / (double) kH);
-    setSize (876, 831);   // 0.75x of the logical canvas — a comfortable default
+    setSize (1000, 753);   // ~0.86x of the logical canvas — a comfortable default
 
     startTimerHz (30);
 }
@@ -292,71 +291,60 @@ void TurboTubesEditor::layoutContent()
     // Place a rotary so its knob face is centred at (cx, cy) with diameter D.
     auto knob = [] (LabeledKnob& k, int cx, int cy, int D)
     {
-        k.setBounds (cx - D / 2, cy - D / 2, D, D + 15);
+        k.setBounds (cx - D / 2, cy - D / 2, D, D + 14);
     };
 
     // ---- the five bottles across the top ARE the model selectors
-    tubeBank.setBounds (0, 0, kPhotoW, 414);
+    tubeBank.setBounds (0, 0, kW, 414);
 
     // ---- meters flank the box face
-    meterIn.setBounds (54, 452, 86, 250);
-    meterOut.setBounds (1028, 452, 86, 250);
-    knob (inTrim,  97,  760, 78);
-    knob (outTrim, 1071, 760, 78);
+    meterIn.setBounds (54, 430, 78, 196);
+    meterOut.setBounds (1036, 430, 78, 196);
 
-    // ---- dynamics (left cluster)
-    knob (bias,     212, 500, 100);
-    knob (sag,      332, 500, 100);
-    knob (variance, 212, 632, 100);
-    knob (inertia,  332, 632, 100);
+    // ---- main knobs, all mounted on the box face
+    // dynamics (left)                     tone / mix (right)
+    knob (bias,     190, 470, 88);         knob (tilt,    880, 470, 88);
+    knob (sag,      294, 470, 88);         knob (mix,     984, 470, 88);
+    knob (variance, 190, 576, 88);         knob (lowCut,  880, 576, 88);
+    knob (inertia,  294, 576, 88);         knob (highCut, 984, 576, 88);
 
-    // ---- drive + turbo (centre)
-    knob (drive, 584, 512, 150);
-    gauge.setBounds (450, 610, 104, 96);
-    knob (width, 688, 628, 94);
-    turbo->setBounds (500, 720, 168, 52);
+    // drive + supply + width + turbo (centre)
+    knob (drive, 584, 466, 128);
+    gauge.setBounds (486, 560, 92, 92);
+    knob (width, 676, 566, 84);
+    turbo->setBounds (500, 648, 168, 46);
 
-    // ---- tone / mix (right cluster)
-    knob (tilt,    836, 500, 100);
-    knob (mix,     956, 500, 100);
-    knob (lowCut,  836, 632, 100);
-    knob (highCut, 956, 632, 100);
+    // ---- trims + sidechain: a lower knob row, still on the box
+    knob (inTrim,  108, 692, 70);
+    knob (scHp,    214, 692, 70);
+    knob (scLp,    312, 692, 70);
+    knob (msBal,   904, 692, 70);
+    knob (outTrim, 1060, 692, 70);
 
-    // ================= rack strip below the photo =================
-    const int strip = kPhotoH;                 // 880
-    const int bh = 30;
-
-    // sidechain + M/S trims live on the right of the strip
-    knob (scHp,  916, strip + 66, 74);
-    knob (scLp,  996, strip + 66, 74);
-    knob (msBal, 1080, strip + 66, 74);
-
-    // row 1: undo/redo · snapshots · preset browser
-    int y1 = strip + 22;
-    undoBtn.setBounds (24, y1, 54, bh);
-    redoBtn.setBounds (82, y1, 54, bh);
+    // ---- compact control bar across the bottom of the box face
+    const int bh = 26;
+    int y1 = 748;                          // presets / snapshots / oversampling
+    undoBtn.setBounds (28, y1, 52, bh);
+    redoBtn.setBounds (84, y1, 52, bh);
     for (int i = 0; i < 4; ++i)
-        snapButtons[i]->setBounds (150 + i * 38, y1, 34, bh);
-    prevPreset.setBounds (312, y1, 26, bh);
-    presetBox.setBounds (342, y1, 300, bh);
-    nextPreset.setBounds (646, y1, 26, bh);
-
-    // row 2: processing toggles
-    int y2 = strip + 62;
-    autoGainBtn.setBounds (24, y2, 128, bh);
-    deltaBtn.setBounds (158, y2, 92, bh);
-    bypassBtn.setBounds (256, y2, 104, bh);
-    msModeBtn->setBounds (366, y2, 110, bh);
-    scExtBtn.setBounds (482, y2, 100, bh);
-
-    // row 3: oversampling · quality · reseed
-    int y3 = strip + 102;
+        snapButtons[i]->setBounds (150 + i * 36, y1, 32, bh);
+    prevPreset.setBounds (300, y1, 26, bh);
+    presetBox.setBounds (330, y1, 232, bh);
+    nextPreset.setBounds (566, y1, 26, bh);
     for (int i = 0; i < 5; ++i)
-        osButtons[i].setBounds (24 + i * 46, y3, 42, bh);
-    qualityBtn->setBounds (262, y3, 104, bh);
-    reseedBtn.setBounds (376, y3, 80, bh);
+        osButtons[i].setBounds (606 + i * 44, y1, 40, bh);
 
-    footer.setBounds (24, strip + 146, 860, 30);
+    int y2 = 780;                          // processing toggles / quality / reseed
+    autoGainBtn.setBounds (28, y2, 124, bh);
+    deltaBtn.setBounds (158, y2, 84, bh);
+    bypassBtn.setBounds (248, y2, 96, bh);
+    msModeBtn->setBounds (350, y2, 104, bh);
+    scExtBtn.setBounds (460, y2, 92, bh);
+    qualityBtn->setBounds (606, y2, 108, bh);
+    reseedBtn.setBounds (720, y2, 80, bh);
+
+    // ---- identity + honest latency on the wooden lip below the box
+    footer.setBounds (330, 828, 512, 26);
 }
 
 void TurboTubesEditor::resized()

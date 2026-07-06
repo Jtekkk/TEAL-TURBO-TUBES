@@ -7,9 +7,10 @@ underneath and a point of view on top.
 ![Turbo Tubes UI](docs/turbo-tubes-ui.png)
 
 *The faceplate is the actual photo of the unit: the five real bottles are the
-model selectors (the selected tube glows with the signal), the brass controls
-are mounted on the box face, and a teal rack strip below holds presets,
-snapshots, oversampling and the sidechain.*
+model selectors (the selected tube glows with the signal), and every control —
+all fifteen knobs, the meters, the SUPPLY gauge, the TURBO lever, and the
+preset / snapshot / oversampling / sidechain controls — is mounted directly on
+the box.*
 
 ## The point of view
 
