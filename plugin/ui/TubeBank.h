@@ -1,7 +1,8 @@
 // TURBO TUBES — plugin/ui/TubeBank.h
-// The five bottles on top of the box. Click a tube to select its model; the
-// selected tube glows with the programme (glow intensity comes from the
-// engine's envelope telemetry), the others idle at pilot-light level.
+// Sits over the top of the faceplate photo, where the five real bottles are.
+// Each bottle is a model selector: click to choose. The selected tube gets a
+// warm glow halo (intensity tracks the engine envelope) and a highlighted
+// name tag on the box lip; the others show dim tags.
 
 #pragma once
 
@@ -25,17 +26,19 @@ public:
     void mouseExit (const juce::MouseEvent&) override;
 
 private:
-    int tubeIndexAt (juce::Point<float> pos) const;
-    juce::Rectangle<float> tubeArea (int index) const;
-    void drawTube (juce::Graphics&, int index, juce::Rectangle<float> area,
-                   float glowAmount, bool selected, bool hovered);
+    // x-centres of the five real bottles, as fractions of the photo width.
+    static constexpr float kCentre[tt::kNumTubeModels] = { 0.257f, 0.381f, 0.504f, 0.635f, 0.762f };
+
+    float centreX (int i) const noexcept { return kCentre[i] * (float) getWidth(); }
+    juce::Rectangle<float> hitBox (int i) const;
+    int tubeIndexAt (juce::Point<float>) const;
 
     juce::RangedAudioParameter& param;
     juce::ParameterAttachment attachment;
     int selected = 1, hovered = -1;
     float glow = 0.0f;
     juce::Random flickerRnd;
-    float flicker[tt::kNumTubeModels] = {};
+    float flicker = 0.0f;
 };
 
 } // namespace ttp

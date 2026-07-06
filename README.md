@@ -6,9 +6,10 @@ underneath and a point of view on top.
 
 ![Turbo Tubes UI](docs/turbo-tubes-ui.png)
 
-*The controls mounted on the reference unit — the five real bottles are the model selectors:*
-
-![Turbo Tubes on the reference box](docs/turbo-tubes-photo-overlay.png)
+*The faceplate is the actual photo of the unit: the five real bottles are the
+model selectors (the selected tube glows with the signal), the brass controls
+are mounted on the box face, and a teal rack strip below holds presets,
+snapshots, oversampling and the sidechain.*
 
 ## The point of view
 

@@ -70,6 +70,12 @@ if(TT_BUILD_PLUGIN)
         plugin/ui/TubeBank.cpp
         plugin/ui/Meters.cpp)
 
+    # Embed the faceplate photo so the plugin ships it (no external files).
+    juce_add_binary_data(TurboTubesData
+        HEADER_NAME BinaryData.h
+        NAMESPACE   BinaryData
+        SOURCES     plugin/assets/turbo_box.jpg)
+
     target_include_directories(TurboTubes PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
     target_compile_definitions(TurboTubes PUBLIC
@@ -81,6 +87,7 @@ if(TT_BUILD_PLUGIN)
 
     target_link_libraries(TurboTubes
         PRIVATE
+            TurboTubesData
             juce::juce_audio_utils
         PUBLIC
             juce::juce_recommended_config_flags

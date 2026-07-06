@@ -1,7 +1,7 @@
 // TURBO TUBES — plugin/ui/Background.h
-// The box itself: chipped teal paint over rusted steel, riveted edges, a dark
-// shelf for the tube bank. Painted procedurally once into a cached image
-// (seeded, so every instance of the plugin looks like the same battered unit).
+// The faceplate is the user's own photograph of the tube box, embedded in the
+// binary. It is drawn to fill the panel; a soft legibility wash sits over the
+// box's front face so the mounted controls stay readable.
 
 #pragma once
 
@@ -14,13 +14,12 @@ namespace ttp
 class Background : public juce::Component
 {
 public:
-    Background() { setInterceptsMouseClicks (false, false); }
+    Background();
 
     void paint (juce::Graphics& g) override;
 
 private:
-    void renderPanel (int w, int h);
-    juce::Image cache;
+    juce::Image photo;
 };
 
 } // namespace ttp
