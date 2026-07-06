@@ -1,0 +1,86 @@
+name: Windows Installer
+
+# Builds the plugin on Windows (MSVC), runs the DSP test suite, and produces a
+# Windows installer (.exe, Inno Setup) plus a portable .zip. Artifacts are
+# attached to every run; pushing a tag like v1.0.0 also creates a GitHub Release
+# with the installer attached.
+
+on:
+  push:
+    branches: [ main, 'claude/**' ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write        # needed to attach the installer to a release on tags
+
+jobs:
+  windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure (CMake · VS 2022 · x64)
+        run: cmake -B build -G "Visual Studio 17 2022" -A x64 -DTT_BUILD_TESTS=ON
+
+      - name: Build (Release)
+        run: cmake --build build --config Release --parallel --target TurboTubes_VST3 TurboTubes_Standalone turbo_dsp_tests
+
+      - name: Run DSP test suite
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Determine version
+        id: ver
+        shell: pwsh
+        run: |
+          if ("${{ github.ref }}" -like "refs/tags/v*") {
+            $v = "${{ github.ref_name }}".TrimStart("v")
+          } else {
+            $v = "1.0.0-dev+$(git rev-parse --short HEAD)"
+          }
+          "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Write-Host "Version: $v"
+
+      - name: Build installer (Inno Setup)
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          & "$iscc" "/DAppVersion=${{ steps.ver.outputs.version }}" `
+                    "/DBuildDir=$((Resolve-Path build).Path)" `
+                    "packaging\windows\TurboTubes.iss"
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed ($LASTEXITCODE)" }
+
+      - name: Portable zip
+        shell: pwsh
+        run: |
+          $dst = "TurboTubes-portable"
+          New-Item -ItemType Directory -Force $dst | Out-Null
+          Copy-Item "build\TurboTubes_artefacts\Release\VST3\Turbo Tubes.vst3" "$dst\" -Recurse
+          Copy-Item "build\TurboTubes_artefacts\Release\Standalone\Turbo Tubes.exe" "$dst\"
+          Copy-Item "README.md","LICENSE" "$dst\"
+          Compress-Archive -Path "$dst\*" `
+            -DestinationPath "TurboTubes-${{ steps.ver.outputs.version }}-win64-portable.zip" -Force
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: TurboTubes-Windows-${{ steps.ver.outputs.version }}
+          path: |
+            packaging/windows/Output/*.exe
+            TurboTubes-*-win64-portable.zip
+          if-no-files-found: error
+
+      - name: Attach to release (tags only)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            packaging/windows/Output/*.exe
+            TurboTubes-*-win64-portable.zip

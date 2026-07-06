@@ -122,6 +122,23 @@ Run them yourself: `cmake -B build && cmake --build build --target turbo_dsp_tes
 | OS 1X–16X + PUNCHY/PRISTINE | quality vs CPU vs latency, switchable while playing |
 | SC EXT + SC LO/HI | external sidechain with detector filtering |
 
+## Installing on Windows
+
+A Windows installer is built automatically by GitHub Actions
+(`.github/workflows/windows-installer.yml`):
+
+- **Any commit** — grab `TurboTubes-Windows-<version>` from the run's
+  **Artifacts** (the `.exe` installer + a portable `.zip`).
+- **Tagged release** (`v1.0.0`, …) — the installer is attached to the
+  GitHub Release.
+
+The installer (Inno Setup) places the VST3 in the shared
+`C:\Program Files\Common Files\VST3` folder and the Standalone app in
+Program Files; both components are individually selectable. To build it
+locally on Windows: `cmake -B build -G "Visual Studio 17 2022" -A x64 && cmake
+--build build --config Release`, then run
+`ISCC packaging\windows\TurboTubes.iss`.
+
 ## Building
 
 Requires CMake ≥ 3.22 and a C++20 compiler. JUCE 8.0.8 is fetched

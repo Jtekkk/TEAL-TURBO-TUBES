@@ -11,6 +11,7 @@
 //   * block-size invariance, NaN/denormal safety fuzz
 //   * CPU benchmark (informational + generous floor)
 
+#define _USE_MATH_DEFINES   // MSVC: expose M_PI from <cmath> (must precede it)
 #include <cstdio>
 #include <cstdlib>
 #include <cmath>

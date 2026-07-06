@@ -19,7 +19,11 @@ set(TT_AAX_SDK_PATH "" CACHE PATH "Path to the AAX SDK (enables the AAX format)"
 if(TT_BUILD_TESTS)
     enable_testing()
     add_executable(turbo_dsp_tests tests/dsp_tests.cpp)
-    target_compile_options(turbo_dsp_tests PRIVATE -O2 -Wall -Wextra)
+    if(MSVC)
+        target_compile_options(turbo_dsp_tests PRIVATE /O2 /W3)
+    else()
+        target_compile_options(turbo_dsp_tests PRIVATE -O2 -Wall -Wextra)
+    endif()
     add_test(NAME dsp COMMAND turbo_dsp_tests)
 endif()
 
@@ -32,11 +36,14 @@ if(TT_BUILD_PLUGIN)
         GIT_SHALLOW    TRUE)
     FetchContent_MakeAvailable(JUCE)
 
+    # AU is macOS-only; everything else is cross-platform.
+    set(TT_FORMATS VST3 Standalone)
+    if(APPLE)
+        list(APPEND TT_FORMATS AU)
+    endif()
     if(TT_AAX_SDK_PATH)
         juce_set_aax_sdk_path(${TT_AAX_SDK_PATH})
-        set(TT_FORMATS VST3 AU AAX Standalone)
-    else()
-        set(TT_FORMATS VST3 AU Standalone)
+        list(APPEND TT_FORMATS AAX)
     endif()
 
     juce_add_plugin(TurboTubes
