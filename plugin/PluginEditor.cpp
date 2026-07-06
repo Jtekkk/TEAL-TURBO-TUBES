@@ -10,12 +10,14 @@ static constexpr int kW = 1000, kH = 640;
 
 //==============================================================================
 LabeledKnob::LabeledKnob (juce::AudioProcessorValueTreeState& apvts, const char* paramID,
-                          const juce::String& labelText)
+                          const juce::String& labelText, juce::Component* popupParent)
     : label (labelText)
 {
     slider.setSliderStyle (juce::Slider::RotaryHorizontalVerticalDrag);
     slider.setTextBoxStyle (juce::Slider::NoTextBox, false, 0, 0);
-    slider.setPopupDisplayEnabled (true, false, nullptr);
+    // Parent the drag bubble inside the (scaled) content so it inherits this
+    // editor's look-and-feel — no global default LnF, no cross-instance state.
+    slider.setPopupDisplayEnabled (true, false, popupParent);
     addAndMakeVisible (slider);
 
     attachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (
@@ -134,24 +136,23 @@ TurboTubesEditor::TurboTubesEditor (TurboTubesProcessor& p)
       tubeBank (*p.apvts.getParameter (id::tube), &p.undoManager),
       meterIn (p.engine.meterIn, "IN"),
       meterOut (p.engine.meterOut, "OUT"),
-      drive   (p.apvts, id::drive,   "DRIVE"),
-      bias    (p.apvts, id::bias,    "BIAS"),
-      sag     (p.apvts, id::sag,     "SAG"),
-      inertia (p.apvts, id::inertia, "INERTIA"),
-      variance(p.apvts, id::variance,"VARIANCE"),
-      tilt    (p.apvts, id::tilt,    "TILT"),
-      lowCut  (p.apvts, id::lowCut,  "LOW CUT"),
-      highCut (p.apvts, id::highCut, "HIGH CUT"),
-      mix     (p.apvts, id::mix,     "MIX"),
-      width   (p.apvts, id::width,   "WIDTH"),
-      inTrim  (p.apvts, id::inTrim,  "IN TRIM"),
-      outTrim (p.apvts, id::outTrim, "OUT TRIM"),
-      scHp    (p.apvts, id::scHp,    "SC LO"),
-      scLp    (p.apvts, id::scLp,    "SC HI"),
-      msBal   (p.apvts, id::msBal,   "M/S TILT")
+      drive   (p.apvts, id::drive,   "DRIVE",    &content),
+      bias    (p.apvts, id::bias,    "BIAS",     &content),
+      sag     (p.apvts, id::sag,     "SAG",      &content),
+      inertia (p.apvts, id::inertia, "INERTIA",  &content),
+      variance(p.apvts, id::variance,"VARIANCE", &content),
+      tilt    (p.apvts, id::tilt,    "TILT",     &content),
+      lowCut  (p.apvts, id::lowCut,  "LOW CUT",  &content),
+      highCut (p.apvts, id::highCut, "HIGH CUT", &content),
+      mix     (p.apvts, id::mix,     "MIX",      &content),
+      width   (p.apvts, id::width,   "WIDTH",    &content),
+      inTrim  (p.apvts, id::inTrim,  "IN TRIM",  &content),
+      outTrim (p.apvts, id::outTrim, "OUT TRIM", &content),
+      scHp    (p.apvts, id::scHp,    "SC LO",    &content),
+      scLp    (p.apvts, id::scLp,    "SC HI",    &content),
+      msBal   (p.apvts, id::msBal,   "M/S TILT", &content)
 {
     setLookAndFeel (&lnf);
-    juce::LookAndFeel::setDefaultLookAndFeel (&lnf);
 
     addAndMakeVisible (content);
     content.addAndMakeVisible (background);
@@ -276,7 +277,6 @@ TurboTubesEditor::TurboTubesEditor (TurboTubesProcessor& p)
 
 TurboTubesEditor::~TurboTubesEditor()
 {
-    juce::LookAndFeel::setDefaultLookAndFeel (nullptr);
     setLookAndFeel (nullptr);
 }
 

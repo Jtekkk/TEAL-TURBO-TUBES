@@ -116,7 +116,7 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
     add (std::make_unique<P> (juce::ParameterID (id::scHp, 1), "SC Low Cut", freqRange (20.0f, 500.0f), 20.0f,
          juce::AudioParameterFloatAttributes().withStringFromValueFunction (
              [hz] (float v, int n) { return v <= 21.0f ? juce::String ("Off") : hz (v, n); })));
-    add (std::make_unique<P> (juce::ParameterID (id::scLp, 1), "SC High Cut", freqRange (1000.0f, 20000.0f), 20000.0f,
+    add (std::make_unique<P> (juce::ParameterID (id::scLp, 1), "SC High Cut", freqRange (200.0f, 20000.0f), 20000.0f,
          juce::AudioParameterFloatAttributes().withStringFromValueFunction (
              [hz] (float v, int n) { return v >= 19500.0f ? juce::String ("Off") : hz (v, n); })));
     add (std::make_unique<Pb> (juce::ParameterID (id::bypass, 1), "Bypass", false));

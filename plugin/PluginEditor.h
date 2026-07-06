@@ -18,7 +18,7 @@ class LabeledKnob : public juce::Component
 {
 public:
     LabeledKnob (juce::AudioProcessorValueTreeState& apvts, const char* paramID,
-                 const juce::String& labelText);
+                 const juce::String& labelText, juce::Component* popupParent);
 
     void resized() override;
     void paint (juce::Graphics&) override;

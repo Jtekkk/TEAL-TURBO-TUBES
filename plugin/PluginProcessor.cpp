@@ -125,11 +125,6 @@ void TurboTubesProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
     // thread; the engine keeps dry/wet aligned internally in the meantime.
     if (engine.latencySamples() != lastReportedLatency)
         triggerAsyncUpdate();
-
-    // Clear any output channels beyond the main bus (paranoia for odd hosts).
-    for (int ch = getMainBusNumOutputChannels(); ch < buffer.getNumChannels(); ++ch)
-        if (ch >= getMainBusNumInputChannels() + scChannels)
-            buffer.clear (ch, 0, n);
 }
 
 void TurboTubesProcessor::handleAsyncUpdate()
@@ -203,9 +198,16 @@ void TurboTubesProcessor::setStateInformation (const void* data, int sizeInBytes
     if (! root.isValid() || ! root.hasType ("TurboTubesState"))
         return;
 
-    activeSnapshot = (int) root.getProperty ("activeSnapshot", 0);
+    // Clamp against corrupt/foreign state so later snapshots[activeSnapshot]
+    // writes can never go out of bounds.
+    activeSnapshot = juce::jlimit (0, 3, (int) root.getProperty ("activeSnapshot", 0));
     driftSeed.store ((uint32_t) (juce::int64) root.getProperty ("driftSeed", (juce::int64) 0x54554245), std::memory_order_relaxed);
     currentProgram = (int) root.getProperty ("program", 0);
+
+    // Drop any snapshots from a previous state before loading this one, so a
+    // slot that is empty in the incoming state doesn't retain a stale sound.
+    for (auto& s : snapshots)
+        s = juce::ValueTree();
 
     for (const auto& child : root)
     {

@@ -258,6 +258,42 @@ static void testLatencyAndAlignment()
         std::printf ("  delta identity max err %.2e\n", maxErr);
         CHECK (maxErr < 1.0e-5, "delta mode is exactly wet minus dry");
     }
+
+    // Switching oversampling mid-stream must not click. With mix<100% the dry
+    // path contributes, so a mis-timed config switch (dry read offset jumping a
+    // chunk late relative to the wet latency change) shows up as a per-sample
+    // discontinuity. Feed a smooth low tone and bound the sample-to-sample jump.
+    {
+        EngineParams p = cleanParams();
+        p.model = 1;
+        p.driveDb = 12.0f;
+        p.mix = 0.5f;                 // dry + wet: exposes any misalignment
+        p.osIndex = 0;                // start at 1x
+
+        auto in = makeSine (2, n, fs, 90.0, 0.3f);   // smooth, low slew
+        TurboTubesEngine engine;
+        engine.setParams (p);
+        engine.prepare (fs, 128, 2);
+        engine.setParams (p);
+
+        auto out = in;
+        const float refJump = 0.3f * 2.0f * (float) M_PI * 90.0f / (float) fs; // ~1 sample of the tone
+        double worstJump = 0.0;
+        for (int pos = 0; pos < n; pos += 128)
+        {
+            if (pos == 4096) { p.osIndex = 2; engine.setParams (p); }   // 1x → 4x
+            if (pos == 8192) { p.osIndex = 4; engine.setParams (p); }   // 4x → 16x
+            const int m = std::min (128, n - pos);
+            float* ptrs[2] = { out[0].data() + pos, out[1].data() + pos };
+            engine.process (ptrs, m);
+        }
+        // Warm up past the initial primer; scan the switch regions.
+        for (int i = 2050; i < n; ++i)
+            worstJump = std::max (worstJump, (double) std::fabs (out[0][i] - out[0][i - 1]));
+        std::printf ("  OS-switch continuity: worst per-sample jump %.4f (tone step ~%.4f)\n",
+                     worstJump, refJump);
+        CHECK (worstJump < 8.0 * refJump, "mid-stream oversampling switch does not click");
+    }
 }
 
 //==============================================================================

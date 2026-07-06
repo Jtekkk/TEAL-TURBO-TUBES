@@ -118,6 +118,8 @@ public:
         activeTurbo = params.turbo;
         applyStaticConfig();
         fullFade = 1.0f; wetFade = 1.0f;
+        fullTarget = 1.0f; wetTarget = 1.0f;
+        fullState = Stable; flushCountdown = 0;
         probeDirty = true;
         prepared = true;
         reset();
@@ -290,6 +292,14 @@ private:
         const bool stereo = numCh == 2;
         const bool useMS = params.msMode && stereo;
 
+        // ---- config switching fades. Applied FIRST so that in the chunk
+        // where an oversampling switch takes effect, the new latency is
+        // reflected in the dry-delay read below AND the wet path together,
+        // while fullFade == 0 masks the transition. If it ran after the dry
+        // capture, the dry read offset would jump a chunk late — an audible
+        // flam/click whenever the dry signal contributes (mix<1, delta, bypass).
+        stepFades();
+
         // ---- input trim (per-sample smoothed), dry capture, input meter
         for (int i = 0; i < n; ++i)
         {
@@ -359,9 +369,6 @@ private:
         // scales the bias/Miller dynamics as well as the supply squish.
         for (int i = 0; i < n; ++i)
             envB[i] *= params.sag;
-
-        // ---- config switching fades
-        stepFades();
 
         // ---- the tubes (oversampled)
         const auto& mdl = tubeModel (activeModel);
@@ -460,17 +467,27 @@ private:
     //==========================================================================
     // Config fade machinery. OS/quality changes fade the FULL output (latency
     // jumps); model/turbo changes fade the WET path only.
+    //
+    // OS switches reset the oversampler, so after the reset its polyphase
+    // pipeline is full of zeros and real signal only re-emerges L1 samples
+    // later. A plain fade-out/fade-in would unmask that pipeline transient, so
+    // the FULL fade runs a four-state machine:
+    //   Stable → FadeOut (ramp to 0) → Flush (hold muted L1+margin samples so
+    //   the new pipeline fills) → FadeIn (ramp to 1) → Stable.
+    enum { Stable = 0, FadeOut, Flush, FadeIn };
+
     void stepFades() noexcept
     {
         const bool osChange = params.osIndex != activeOsIndex || params.pristine != activePristine;
         const bool wetChange = params.model != activeModel || params.turbo != activeTurbo;
 
-        if (osChange && fullTarget > 0.5f)
+        if (fullState == Stable && osChange)
+        {
             fullTarget = 0.0f;
-        if (wetChange && wetTarget > 0.5f && ! osChange)
-            wetTarget = 0.0f;
+            fullState = FadeOut;
+        }
 
-        if (fullTarget < 0.5f && fullFade <= 0.0f)
+        if (fullState == FadeOut && fullFade <= 0.0f)
         {
             activeOsIndex = params.osIndex;
             activePristine = params.pristine;
@@ -479,8 +496,14 @@ private:
             applyStaticConfig();
             for (int c = 0; c < 2; ++c) { os[c].reset(); tube[c].reset(); }
             latencyChanged.store (true, std::memory_order_release);
-            fullTarget = 1.0f;
+            probeDirty = true;               // model/turbo may have changed with OS
+            flushCountdown = os[0].latencySamples() + 64;   // prime pipeline while muted
+            fullState = Flush;
         }
+
+        // Wet-only change (model/turbo) — independent, only when not mid-OS-switch.
+        if (wetChange && wetTarget > 0.5f && fullState == Stable && ! osChange)
+            wetTarget = 0.0f;
         if (wetTarget < 0.5f && wetFade <= 0.0f)
         {
             activeModel = params.model;
@@ -498,8 +521,21 @@ private:
     void fullFadeStep() noexcept
     {
         constexpr float step = 1.0f / 128.0f;
+        if (fullState == Flush)
+        {
+            fullFade = 0.0f;                 // stay muted while the pipeline fills
+            if (--flushCountdown <= 0)
+            {
+                flushCountdown = 0;
+                fullTarget = 1.0f;
+                fullState = FadeIn;
+            }
+            return;
+        }
         fullFade += fullTarget > fullFade ? step : (fullTarget < fullFade ? -step : 0.0f);
         fullFade = std::clamp (fullFade, 0.0f, 1.0f);
+        if (fullState == FadeIn && fullFade >= 1.0f)
+            fullState = Stable;
     }
 
     void wetFadeStep() noexcept
@@ -539,6 +575,7 @@ private:
 
     float fullFade = 1.0f, fullTarget = 1.0f;
     float wetFade = 1.0f, wetTarget = 1.0f;
+    int fullState = Stable, flushCountdown = 0;
 };
 
 } // namespace tt
