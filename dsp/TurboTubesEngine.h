@@ -145,8 +145,9 @@ public:
         if (p.driftSeed != params.driftSeed)
             drift.reseed (p.driftSeed);
 
-        if (p.driveDb != params.driveDb || p.model != params.model
-            || p.biasKnob != params.biasKnob || p.sag != params.sag
+        if (! exactlyEqual (p.driveDb, params.driveDb) || p.model != params.model
+            || ! exactlyEqual (p.biasKnob, params.biasKnob)
+            || ! exactlyEqual (p.sag, params.sag)
             || p.turbo != params.turbo)
             probeDirty = true;
 

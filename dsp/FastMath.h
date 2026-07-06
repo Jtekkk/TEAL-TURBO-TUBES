@@ -21,6 +21,10 @@ namespace tt
 inline float dbToGain (float db) noexcept   { return std::pow (10.0f, db * 0.05f); }
 inline float gainToDb (float g)  noexcept   { return 20.0f * std::log10 (std::max (g, 1.0e-9f)); }
 
+// Exact float comparison without tripping -Wfloat-equal — used where exact
+// bit-identity is the intended semantic (change detection, not tolerance).
+inline bool exactlyEqual (float a, float b) noexcept { return ! (a < b) && ! (a > b); }
+
 //==============================================================================
 // Algebraic sigmoid family (exact antiderivatives)
 inline float sigS (float x) noexcept        { return x / std::sqrt (1.0f + x * x); }   // S(x)
@@ -95,7 +99,7 @@ struct Smoother
 
     void setTarget (float v) noexcept
     {
-        if (v == target)
+        if (exactlyEqual (v, target))
             return;
         target = v;
         const float dist = std::fabs (target - current);
