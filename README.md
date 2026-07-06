@@ -6,6 +6,10 @@ underneath and a point of view on top.
 
 ![Turbo Tubes UI](docs/turbo-tubes-ui.png)
 
+*The controls mounted on the reference unit — the five real bottles are the model selectors:*
+
+![Turbo Tubes on the reference box](docs/turbo-tubes-photo-overlay.png)
+
 ## The point of view
 
 Most saturators are a static waveshaper with a tone knob. Turbo Tubes is built
