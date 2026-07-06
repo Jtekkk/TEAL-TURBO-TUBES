@@ -7,7 +7,7 @@ name: Windows Installer
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, 'claude/**' ]
     tags: [ 'v*' ]
   pull_request:
     branches: [ main ]
@@ -17,6 +17,13 @@ on:
         description: "Set (e.g. v1.0.0) to publish a public GitHub Release with the installer attached. Leave blank for artifacts only."
         required: false
         default: ""
+
+# A public Release is published when any of these hold:
+#   * a tag  v*  is pushed
+#   * this workflow is dispatched with a release_tag input
+#   * a pushed commit's message contains a marker like  [release v1.0.0]
+# The last path exists because some environments can push branches but not tags
+# or dispatch workflows; the runner's own token creates the tag+release.
 
 permissions:
   contents: write        # needed to attach the installer to a release on tags
@@ -58,18 +65,33 @@ jobs:
       - name: Install Inno Setup
         run: choco install innosetup --no-progress -y
 
+      # Resolve whether this run publishes a Release, and under what tag.
+      # Inputs come via env vars (not inline interpolation) to stay injection-safe.
+      - name: Resolve release
+        id: rel
+        shell: pwsh
+        env:
+          REF: ${{ github.ref }}
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_TAG: ${{ inputs.release_tag }}
+          HEAD_MSG: ${{ github.event.head_commit.message }}
+        run: |
+          $tag = ""
+          if ($env:REF -like "refs/tags/v*")        { $tag = $env:REF_NAME }
+          elseif ($env:INPUT_TAG -ne "")            { $tag = $env:INPUT_TAG }
+          elseif ($env:HEAD_MSG -match '\[release\s+(v[0-9][^\]\s]*)\]') { $tag = $Matches[1] }
+          $publish = if ($tag -ne "") { "true" } else { "false" }
+          "tag=$tag"         | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "publish=$publish" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Write-Host "publish=$publish tag=$tag"
+
       - name: Determine version
         id: ver
         shell: pwsh
         run: |
-          $rt = "${{ inputs.release_tag }}"
-          if ("${{ github.ref }}" -like "refs/tags/v*") {
-            $v = "${{ github.ref_name }}".TrimStart("v")
-          } elseif ($rt -ne "") {
-            $v = $rt.TrimStart("v")
-          } else {
-            $v = "1.0.0-dev+$(git rev-parse --short HEAD)"
-          }
+          $tag = "${{ steps.rel.outputs.tag }}"
+          if ($tag -ne "") { $v = $tag.TrimStart("v") }
+          else { $v = "1.0.0-dev+$(git rev-parse --short HEAD)" }
           "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           Write-Host "Version: $v"
 
@@ -102,11 +124,11 @@ jobs:
             TurboTubes-*-win64-portable.zip
           if-no-files-found: error
 
-      - name: Publish GitHub Release (tag push, or manual release_tag)
-        if: ${{ startsWith(github.ref, 'refs/tags/') || inputs.release_tag != '' }}
+      - name: Publish GitHub Release
+        if: ${{ steps.rel.outputs.publish == 'true' }}
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ inputs.release_tag != '' && inputs.release_tag || github.ref_name }}
+          tag_name: ${{ steps.rel.outputs.tag }}
           name: TURBO TUBES ${{ steps.ver.outputs.version }}
           target_commitish: ${{ github.sha }}
           generate_release_notes: true
