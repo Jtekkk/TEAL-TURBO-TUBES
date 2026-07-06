@@ -47,9 +47,9 @@ if(TT_BUILD_PLUGIN)
     endif()
 
     juce_add_plugin(TurboTubes
-        COMPANY_NAME              "JTEK Audio"
-        BUNDLE_ID                 com.jtekaudio.turbotubes
-        PLUGIN_MANUFACTURER_CODE  Jtek
+        COMPANY_NAME              "TEAL"
+        BUNDLE_ID                 com.teal.turbotubes
+        PLUGIN_MANUFACTURER_CODE  Teal
         PLUGIN_CODE               Ttbs
         FORMATS                   ${TT_FORMATS}
         PRODUCT_NAME              "Turbo Tubes"

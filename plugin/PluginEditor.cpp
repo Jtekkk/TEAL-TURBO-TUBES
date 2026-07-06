@@ -373,7 +373,7 @@ void TurboTubesEditor::timerCallback()
     {
         const int lat = processor.getLatencySamples();
         const double ms = 1000.0 * lat / std::max (44100.0, processor.getSampleRate());
-        footer.setText (juce::String ("TURBO TUBES | JTEK AUDIO        LATENCY ")
+        footer.setText (juce::String ("TURBO TUBES | TEAL        LATENCY ")
                             + juce::String (lat) + " smp / " + juce::String (ms, 2) + " ms",
                         juce::dontSendNotification);
         footer.setFont (stencilFont (12.0f, false));

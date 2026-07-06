@@ -11,7 +11,7 @@
 #endif
 
 #define AppName    "Turbo Tubes"
-#define Publisher  "JTEK Audio"
+#define Publisher  "TEAL"
 #define ArtefactDir BuildDir + "\TurboTubes_artefacts\Release"
 
 [Setup]
