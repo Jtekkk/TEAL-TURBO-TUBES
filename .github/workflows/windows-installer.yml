@@ -7,7 +7,7 @@ name: Windows Installer
 
 on:
   push:
-    branches: [ main, 'claude/**' ]
+    branches: [ main ]
     tags: [ 'v*' ]
   pull_request:
     branches: [ main ]
@@ -15,6 +15,11 @@ on:
 
 permissions:
   contents: write        # needed to attach the installer to a release on tags
+
+# Cancel superseded runs for the same ref (e.g. rapid PR pushes).
+concurrency:
+  group: windows-installer-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   windows:
@@ -24,14 +29,26 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Configure (CMake · VS 2022 · x64)
-        run: cmake -B build -G "Visual Studio 17 2022" -A x64 -DTT_BUILD_TESTS=ON
+      # Use the Ninja generator + MSVC dev environment rather than the VS
+      # generator: it is immune to runner-image VS-version drift and produces
+      # the same artefact layout (TurboTubes_artefacts/Release/…) the installer
+      # expects.
+      - name: Set up MSVC (x64)
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
 
-      - name: Build (Release)
-        run: cmake --build build --config Release --parallel --target TurboTubes_VST3 TurboTubes_Standalone turbo_dsp_tests
+      - name: Install Ninja
+        run: choco install ninja --no-progress -y
+
+      - name: Configure (CMake · Ninja · MSVC)
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DTT_BUILD_TESTS=ON
+
+      - name: Build
+        run: cmake --build build --parallel --target TurboTubes_VST3 TurboTubes_Standalone turbo_dsp_tests
 
       - name: Run DSP test suite
-        run: ctest --test-dir build -C Release --output-on-failure
+        run: ctest --test-dir build --output-on-failure
 
       - name: Install Inno Setup
         run: choco install innosetup --no-progress -y
